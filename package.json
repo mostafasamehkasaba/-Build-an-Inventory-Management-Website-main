@@ -18,9 +18,9 @@
     "@stackframe/stack": "^2.8.47",
     "dotenv": "^17.4.2",
     "lucide-react": "^0.548.0",
-    "next": "16.0.0",
-    "react": "19.2.0",
-    "react-dom": "19.2.0",
+    "next": "^16.2.11",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "rechart": "^0.0.1",
     "recharts": "^3.3.0",
     "zod": "^4.1.12"
