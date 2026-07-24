@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import GetCurrentuser  from "../auth";
+import GetCurrentuser from "../auth";
 import { prisma } from "../prisma";
 import { z } from "zod";
 
@@ -13,6 +13,10 @@ const ProductSchema = z.object({
   lowStockAt: z.coerce.number().int().min(0).optional(),
 });
 
+export type CreateProductState = {
+  error?: string;
+};
+
 export async function deleteProduct(formData: FormData) {
   const user = await GetCurrentuser();
   const id = String(formData.get("id") || "");
@@ -22,8 +26,15 @@ export async function deleteProduct(formData: FormData) {
   });
 }
 
-export async function createProduct(formData: FormData) {
+export async function createProduct(
+  prevState: CreateProductState,
+  formData: FormData
+): Promise<CreateProductState> {
   const user = await GetCurrentuser();
+
+  if (!user) {
+    return { error: "المستخدم غير موجود" };
+  }
 
   const parsed = ProductSchema.safeParse({
     name: formData.get("name"),
@@ -33,28 +44,28 @@ export async function createProduct(formData: FormData) {
     lowStockAt: formData.get("lowStockAt") || undefined,
   });
 
-
   if (!parsed.success) {
-    throw new Error("Validation failed");
+    return { error: "من فضلك تأكد من صحة البيانات المدخلة" };
   }
 
-  
-  if (!user) {
-    throw new Error("User not found");
+  try {
+    await prisma.product.create({
+      data: {
+        ...parsed.data,
+        userId: user.id,
+      },
+    });
+  } catch (error: unknown) {
+    console.error("تفاصيل خطأ Prisma:", error);
+
+    const prismaError = error as { code?: string };
+
+    if (prismaError.code === "P2002") {
+      return { error: "SKU already exists. Please use a unique SKU." };
+    }
+
+    return { error: "حدث خطأ أثناء إضافة المنتج، حاول مرة أخرى" };
   }
 
-try {
-  await prisma.product.create({
-    data: {
-      ...parsed.data,
-      userId: user.id,
-    },
-  });
-  
-} catch (error) {
- 
-  console.error("تفاصيل خطأ Prisma:", error);
-  throw new Error("Failed to create product.");
-}
-return redirect("/inventory");
+  redirect("/inventory");
 }
